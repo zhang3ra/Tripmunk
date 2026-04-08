@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tripmunk - AI-Powered Road Trip Planner</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: linear-gradient(135deg, #E07A5F 0%, #F4A261 40%, #E9C46A 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .brand { text-align: center; margin-bottom: 10px; }
+        .brand-logo { font-size: 3rem; margin-bottom: 5px; }
+        .brand-name { font-size: 2.5rem; font-weight: 800; color: white; text-shadow: 3px 3px 6px rgba(0,0,0,0.2); }
+        .subtitle { text-align: center; color: rgba(255,255,255,0.95); margin-bottom: 30px; }
+        .main-layout { display: grid; grid-template-columns: 350px 1fr; gap: 25px; }
+        .input-panel, .result-panel { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 15px 50px rgba(0,0,0,0.15); }
+        .input-panel h2 { color: #333; margin-bottom: 20px; font-size: 1.3rem; border-bottom: 3px solid #E07A5F; padding-bottom: 10px; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; color: #555; font-weight: 600; margin-bottom: 6px; font-size: 0.9rem; }
+        .form-group textarea { width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 12px; font-size: 0.95rem; min-height: 120px; resize: vertical; }
+        .btn-generate { width: 100%; padding: 15px; background: linear-gradient(135deg, #E07A5F 0%, #F4A261 100%); color: white; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 700; cursor: pointer; }
+        .tip-box { margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #fdf8f3 0%, #fff 100%); border-radius: 12px; font-size: 0.85rem; color: #666; border-left: 4px solid #F4A261; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tab { padding: 10px 20px; border: none; background: #f5f5f5; border-radius: 25px; cursor: pointer; font-weight: 600; }
+        .tab.active { background: linear-gradient(135deg, #E07A5F 0%, #F4A261 100%); color: white; }
+        .map-section { margin-bottom: 25px; padding: 25px; background: linear-gradient(135deg, #fdf8f3 0%, #fff 100%); border-radius: 20px; border: 3px solid #F4A261; }
+        .map-section h3 { color: #333; margin-bottom: 15px; font-size: 1.3rem; }
+        .map-iframe-container { position: relative; width: 100%; height: 400px; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .map-iframe-container iframe { width: 100%; height: 100%; border: none; }
+        .route-stops { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; padding: 20px; background: white; border-radius: 16px; justify-content: center; }
+        .stop-item { display: flex; align-items: center; gap: 5px; padding: 8px 16px; background: linear-gradient(135deg, #E07A5F 0%, #F4A261 100%); color: white; border-radius: 25px; font-size: 0.9rem; font-weight: 600; }
+        .stop-arrow { color: #E07A5F; font-size: 1.3rem; font-weight: bold; }
+        .map-link { margin-top: 15px; padding: 12px 24px; background: #4285f4; color: white; border-radius: 10px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+        .trip-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 25px; background: linear-gradient(135deg, #fdf8f3 0%, #fff 100%); border-radius: 16px; border-left: 5px solid #E07A5F; }
+        .trip-title { font-size: 1.6rem; color: #333; font-weight: 700; }
+        .trip-summary { display: flex; gap: 30px; }
+        .summary-item { text-align: center; }
+        .summary-item .value { font-size: 1.4rem; font-weight: 800; color: #E07A5F; }
+        .summary-item .label { font-size: 0.75rem; color: #999; text-transform: uppercase; }
+        .itinerary-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .itinerary-table th { background: linear-gradient(135deg, #E07A5F 0%, #F4A261 100%); color: white; padding: 14px 10px; text-align: left; font-weight: 700; }
+        .itinerary-table th:first-child { border-radius: 10px 0 0 0; }
+        .itinerary-table th:last-child { border-radius: 0 10px 0 0; }
+        .itinerary-table td { padding: 14px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+        .main-row { cursor: pointer; transition: background 0.2s; }
+        .main-row:nth-child(odd) { background: #fdf8f3; }
+        .main-row:hover { background: #f5ebe0; }
+        .main-row.expanded { background: #fff5ee; }
+        .detail-row { display: none; background: #faf8f5; }
+        .detail-row.active { display: table-row; }
+        .detail-content { padding: 20px; }
+        .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+        .detail-card { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .detail-card h4 { color: #E07A5F; font-size: 0.9rem; margin-bottom: 10px; text-transform: uppercase; }
+        .detail-card p { color: #555; font-size: 0.9rem; line-height: 1.5; margin-bottom: 8px; }
+        .expand-icon { display: inline-block; width: 20px; height: 20px; text-align: center; line-height: 20px; border-radius: 50%; background: #E07A5F; color: white; font-size: 0.75rem; margin-right: 8px; transition: transform 0.2s; }
+        .main-row.expanded .expand-icon { transform: rotate(90deg); }
+        .day-cell { font-weight: 700; color: #E07A5F; white-space: nowrap; display: flex; align-items: center; }
+        .time-cell { color: #888; font-size: 0.8rem; white-space: nowrap; }
+        .location-cell { font-weight: 600; color: #444; }
+        .activity-cell { color: #555; max-width: 200px; line-height: 1.4; }
+        .cost-cell { text-align: right; font-weight: 700; color: #2e7d32; cursor: pointer; padding: 8px; border-radius: 6px; transition: background 0.2s; }
+        .cost-cell:hover { background: rgba(46, 125, 50, 0.1); }
+        .cost-cell.editing { background: white; box-shadow: 0 0 0 2px #E07A5F; }
+        .cost-cell input { width: 70px; padding: 5px; border: 1px solid #ddd; border-radius: 4px; font-size: 0.85rem; text-align: right; }
+        .cost-summary { margin-top: 25px; padding: 25px; background: linear-gradient(135deg, #fdf8f3 0%, #fff 100%); border-radius: 16px; border: 2px solid #f5e0d5; }
+        .cost-summary h3 { color: #333; margin-bottom: 20px; }
+        .cost-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; }
+        .cost-item { display: flex; justify-content: space-between; padding: 12px 18px; background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .cost-item .category { color: #666; font-weight: 500; }
+        .cost-item .amount { font-weight: 700; color: #333; }
+        .total-cost { margin-top: 20px; padding: 18px 25px; background: linear-gradient(135deg, #E07A5F 0%, #F4A261 100%); border-radius: 14px; display: flex; justify-content: space-between; align-items: center; }
+        .total-cost .label { color: rgba(255,255,255,0.95); font-size: 1.1rem; font-weight: 600; }
+        .total-cost .amount { color: white; font-size: 1.8rem; font-weight: 800; }
+        .per-person-cost { margin-top: 12px; padding: 18px 25px; background: linear-gradient(135deg, #4CAF50 0%, #66BB6A 100%); border-radius: 14px; display: flex; justify-content: space-between; align-items: center; }
+        .per-person-cost .label { color: rgba(255,255,255,0.95); font-size: 1.1rem; font-weight: 600; }
+        .per-person-cost .amount { color: white; font-size: 1.8rem; font-weight: 800; }
+        @media (max-width: 900px) { .main-layout { grid-template-columns: 1fr; } .trip-header { flex-direction: column; gap: 15px; text-align: center; } .map-iframe-container { height: 280px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="brand"><div class="brand-logo">🐿️</div><div class="brand-name">Tripmunk</div></div>
+        <p class="subtitle">AI-Powered Road Trip Planning for Budget & Time-Sensitive Travelers</p>
+        <div class="main-layout">
+            <div class="input-panel">
+                <h2>✏️ Plan Your Trip</h2>
+                <form id="tripForm">
+                    <div class="form-group"><label>Describe Your Trip</label><textarea placeholder="e.g., young couple of 2, Houston to Austin, 3 days, $600 budget">young couple of 2, Houston to Austin then back to Houston, 3 days, total budget $600</textarea></div>
+                    <button type="submit" class="btn-generate">🚀 Generate Itinerary</button>
+                </form>
+                <div class="tip-box"><strong>💡 Tip:</strong><br>Tell us your group size, departure, destinations, duration, and budget.</div>
+            </div>
+            <div class="result-panel">
+                <div class="tabs"><button class="tab active">California Trip</button><button class="tab">Florida Trip</button></div>
+                <div class="map-section">
+                    <h3>🗺️ Route Overview</h3>
+                    <div class="map-iframe-container">
+                        <iframe src="https://www.google.com/maps/embed?pb=!1m28!1m12!1m3!1d11000000!2d-105!3d35!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!4m13!3e0!4m5!1s0x8640b8b4488d8501%3A0xca0d02def365053b!2sHouston%2C%20TX!3m2!1d29.7604267!2d-95.3698028!4m5!1s0x872b05e5f3c6d0df%3A0x5e8d0f8f8f8f8f8f!2sAustin%2C%20TX!3m2!1d30.267153!2d-97.7430608!5e0!3m2!1sen!2sus!4v1609459200000" allowfullscreen loading="lazy"></iframe>
+                    </div>
+                    <div class="route-stops">
+                        <div class="stop-item">📍 Houston, TX</div><span class="stop-arrow">→</span>
+                        <div class="stop-item">Carlsbad, NM</div><span class="stop-arrow">→</span>
+                        <div class="stop-item">White Sands, NM</div><span class="stop-arrow">→</span>
+                        <div class="stop-item">Tucson, AZ</div><span class="stop-arrow">→</span>
+                        <div class="stop-item">San Diego, CA</div><span class="stop-arrow">→</span>
+                        <div class="stop-item">Joshua Tree, CA</div><span class="stop-arrow">→</span>
+                        <div class="stop-item">Page, AZ</div><span class="stop-arrow">→</span>
+                        <div class="stop-item">Monument Valley, AZ</div><span class="stop-arrow">→</span>
+                        <div class="stop-item">Amarillo, TX</div><span class="stop-arrow">→</span>
+                        <div class="stop-item">🏁 Houston, TX</div>
+                    </div>
+                    <div style="text-align: center;"><a href="https://www.google.com/maps/dir/Houston,+TX/Carlsbad,+NM/White+Sands+National+Park,+NM/Tucson,+AZ/San+Diego,+CA/Joshua+Tree+National+Park,+CA/Page,+AZ/Monument+Valley,+AZ/Amarillo,+TX/Houston,+TX" target="_blank" class="map-link">🌐 Open Full Map</a></div>
+                </div>
+                <div class="trip-header">
+                    <h2 class="trip-title">🌴 California Road Trip</h2>
+                    <div class="trip-summary">
+                        <div class="summary-item"><div class="value">9 Days</div><div class="label">Duration</div></div>
+                        <div class="summary-item"><div class="value">2 People</div><div class="label">Travelers</div></div>
+                        <div class="summary-item"><div class="value" id="totalCostDisplay">$2,124</div><div class="label">Total Cost</div></div>
+                        <div class="summary-item"><div class="value" id="perPersonDisplay">$1,062</div><div class="label">Per Person</div></div>
+                    </div>
+                </div>
+                <table class="itinerary-table">
+                    <thead><tr><th>Date</th><th>Day</th><th>From</th><th>To</th><th>Distance</th><th>Activities</th><th>Gas $</th><th>Hotel $</th><th>Food $</th><th>Other $</th></tr></thead>
+                    <tbody id="itineraryBody">
+                        <tr class="main-row" data-day="1"><td class="day-cell"><span class="expand-icon">▶</span>Dec 21 Sat</td><td class="time-cell">Day 1</td><td class="location-cell">Houston, TX</td><td class="location-cell">Carlsbad, NM</td><td>700 mi</td><td class="activity-cell">Depart Houston, drive to New Mexico</td><td class="cost-cell" data-type="gas" data-day="1" data-value="85">$85</td><td class="cost-cell" data-type="hotel" data-day="1" data-value="121">$121</td><td class="cost-cell" data-type="food" data-day="1" data-value="70">$70</td><td class="cost-cell" data-type="other" data-day="1" data-value="0">-</td></tr>
+                        <tr class="detail-row" data-day="1"><td colspan="10"><div class="detail-content"><div class="detail-grid"><div class="detail-card"><h4>🏨 Hotel Details</h4><p><strong>Quality Inn</strong></p><p>2808 W Pierce St, Carlsbad, NM</p><p>Check-in: 4:00 PM</p></div><div class="detail-card"><h4>🍽️ Dining</h4><p><strong>Lunch:</strong> Truck Stop BBQ</p><p><strong>Dinner:</strong> Yellow Brix Restaurant</p></div><div class="detail-card"><h4>⛽ Driving</h4><p><strong>Drive Time:</strong> 10.5 hours</p><p><strong>Gas Stops:</strong> 2</p></div></div></div></td></tr>
+                        <tr class="main-row" data-day="2"><td class="day-cell"><span class="expand-icon">▶</span>Dec 22 Sun</td><td class="time-cell">Day 2</td><td class="location-cell">Carlsbad, NM</td><td class="location-cell">Carlsbad Caverns NP</td><td>21 mi</td><td class="activity-cell">Explore Carlsbad Caverns</td><td class="cost-cell" data-type="gas" data-day="2" data-value="5">$5</td><td class="cost-cell" data-type="hotel" data-day="2" data-value="100">$100</td><td class="cost-cell" data-type="food" data-day="2" data-value="20">$20</td><td class="cost-cell" data-type="other" data-day="2" data-value="30">$30</td></tr>
+                        <tr class="detail-row" data-day="2"><td colspan="10"><div class="detail-content"><div class="detail-grid"><div class="detail-card"><h4>🎫 Park Info</h4><p><strong>Carlsbad Caverns NP</strong></p><p>Entrance Fee: $15/person</p></div><div class="detail-card"><h4>⏰ Schedule</h4><p>9:00 AM - Arrive at park</p><p>12:00 PM - Lunch at visitor center</p></div></div></div></td></tr>
+                        <tr class="main-row" data-day="3"><td class="day-cell"><span class="expand-icon">▶</span>Dec 23 Mon</td><td class="time-cell">Day 3</td><td class="location-cell">White Sands, NM</td><td class="location-cell">White Sands NP</td><td>15 mi</td><td class="activity-cell">White Sands hiking</td><td class="cost-cell" data-type="gas" data-day="3" data-value="5">$5</td><td class="cost-cell" data-type="hotel" data-day="3" data-value="116">$116</td><td class="cost-cell" data-type="food" data-day="3" data-value="35">$35</td><td class="cost-cell" data-type="other" data-day="3" data-value="25">$25</td></tr>
+                        <tr class="detail-row" data-day="3"><td colspan="10"><div class="detail-content"><div class="detail-grid"><div class="detail-card"><h4>🏜️ White Sands</h4><p>19955 US-70, Alamogordo, NM</p><p>Entrance: $25/vehicle</p></div></div></div></td></tr>
+                        <tr class="main-row" data-day="4"><td class="day-cell"><span class="expand-icon">▶</span>Dec 24 Tue</td><td class="time-cell">Day 4</td><td class="location-cell">Tucson, AZ</td><td class="location-cell">San Diego, CA</td><td>490 mi</td><td class="activity-cell">Drive to San Diego</td><td class="cost-cell" data-type="gas" data-day="4" data-value="60">$60</td><td class="cost-cell" data-type="hotel" data-day="4" data-value="105">$105</td><td class="cost-cell" data-type="food" data-day="4" data-value="48">$48</td><td class="cost-cell" data-type="other" data-day="4" data-value="0">-</td></tr>
+                        <tr class="detail-row" data-day="4"><td colspan="10"><div class="detail-content"><div class="detail-grid"><div class="detail-card"><h4>⛽ Driving</h4><p><strong>Drive Time:</strong> 7.5 hours</p></div></div></div></td></tr>
+                        <tr class="main-row" data-day="5"><td class="day-cell"><span class="expand-icon">▶</span>Dec 25 Wed</td><td class="time-cell">Day 5</td><td class="location-cell">San Diego, CA</td><td class="location-cell">San Diego (Local)</td><td>-</td><td class="activity-cell">Explore San Diego</td><td class="cost-cell" data-type="gas" data-day="5" data-value="10">$10</td><td class="cost-cell" data-type="hotel" data-day="5" data-value="152">$152</td><td class="cost-cell" data-type="food" data-day="5" data-value="100">$100</td><td class="cost-cell" data-type="other" data-day="5" data-value="50">$50</td></tr>
+                        <tr class="detail-row" data-day="5"><td colspan="10"><div class="detail-content"><div class="detail-grid"><div class="detail-card"><h4>🎯 Activities</h4><p>• Balboa Park</p><p>• La Jolla Cove</p><p>• Old Town</p></div></div></div></td></tr>
+                        <tr class="main-row" data-day="6"><td class="day-cell"><span class="expand-icon">▶</span>Dec 26 Thu</td><td class="time-cell">Day 6</td><td class="location-cell">San Diego</td><td class="location-cell">Joshua Tree, CA</td><td>135 mi</td><td class="activity-cell">Joshua Tree National Park</td><td class="cost-cell" data-type="gas" data-day="6" data-value="20">$20</td><td class="cost-cell" data-type="hotel" data-day="6" data-value="0">-</td><td class="cost-cell" data-type="food" data-day="6" data-value="0">-</td><td class="cost-cell" data-type="other" data-day="6" data-value="30">$30</td></tr>
+                        <tr class="detail-row" data-day="6"><td colspan="10"><div class="detail-content"><div class="detail-grid"><div class="detail-card"><h4>🌵 Joshua Tree</h4><p>• Hidden Valley Trail</p><p>• Keys View</p><p>• Cholla Cactus Garden</p></div></div></div></td></tr>
+                        <tr class="main-row" data-day="7"><td class="day-cell"><span class="expand-icon">▶</span>Dec 27 Fri</td><td class="time-cell">Day 7</td><td class="location-cell">Joshua Tree</td><td class="location-cell">Page, AZ</td><td>280 mi</td><td class="activity-cell">Antelope Canyon</td><td class="cost-cell" data-type="gas" data-day="7" data-value="35">$35</td><td class="cost-cell" data-type="hotel" data-day="7" data-value="157">$157</td><td class="cost-cell" data-type="food" data-day="7" data-value="39">$39</td><td class="cost-cell" data-type="other" data-day="7" data-value="160">$160</td></tr>
+                        <tr class="detail-row" data-day="7"><td colspan="10"><div class="detail-content"><div class="detail-grid"><div class="detail-card"><h4>🎫 Activities</h4><p>Upper Antelope Canyon tour</p><p>Horseshoe Bend sunset</p></div></div></div></td></tr>
+                        <tr class="main-row" data-day="8"><td class="day-cell"><span class="expand-icon">▶</span>Dec 28 Sat</td><td class="time-cell">Day 8</td><td class="location-cell">Monument Valley</td><td class="location-cell">Four Corners</td><td>80 mi</td><td class="activity-cell">Monument Valley</td><td class="cost-cell" data-type="gas" data-day="8" data-value="10">$10</td><td class="cost-cell" data-type="hotel" data-day="8" data-value="193">$193</td><td class="cost-cell" data-type="food" data-day="8" data-value="38">$38</td><td class="cost-cell" data-type="other" data-day="8" data-value="20">$20</td></tr>
+                        <tr class="detail-row" data-day="8"><td colspan="10"><div class="detail-content"><div class="detail-grid"><div class="detail-card"><h4>🏜️ Monument Valley</h4><p>Scenic drive through valley</p><p>Four Corners Monument</p></div></div></div></td></tr>
+                        <tr class="main-row" data-day="9"><td class="day-cell"><span class="expand-icon">▶</span>Dec 29 Sun</td><td class="time-cell">Day 9</td><td class="location-cell">Amarillo, TX</td><td class="location-cell">Houston Airport</td><td>600 mi</td><td class="activity-cell">Return to Houston</td><td class="cost-cell" data-type="gas" data-day="9" data-value="70">$70</td><td class="cost-cell" data-type="hotel" data-day="9" data-value="152">$152</td><td class="cost-cell" data-type="food" data-day="9" data-value="63">$63</td><td class="cost-cell" data-type="other" data-day="9" data-value="0">-</td></tr>
+                        <tr class="detail-row" data-day="9"><td colspan="10"><div class="detail-content"><div class="detail-grid"><div class="detail-card"><h4>⛽ Driving</h4><p><strong>Drive Time:</strong> 9 hours</p></div></div></div></td></tr>
+                    </tbody>
+                </table>
+                <div class="cost-summary">
+                    <h3>💰 Cost Breakdown</h3>
+                    <div class="cost-breakdown">
+                        <div class="cost-item"><span class="category">⛽ Gas</span><span class="amount" id="gasCost">$300</span></div>
+                        <div class="cost-item"><span class="category">🏨 Hotels</span><span class="amount" id="hotelsCost">$1,096</span></div>
+                        <div class="cost-item"><span class="category">🍽️ Food</span><span class="amount" id="foodCost">$413</span></div>
+                        <div class="cost-item"><span class="category">🎫 Other</span><span class="amount" id="activitiesCost">$315</span></div>
+                    </div>
+                    <div class="total-cost"><span class="label">💵 Total Trip Cost</span><span class="amount" id="totalTripCost">$2,124</span></div>
+                    <div class="per-person-cost"><span class="label">👤 Per Person</span><span class="amount" id="perPersonCost">$1,062</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const tripData = { travelers: 2, days: [{gas:85,hotel:121,food:70,other:0},{gas:5,hotel:100,food:20,other:30},{gas:5,hotel:116,food:35,other:25},{gas:60,hotel:105,food:48,other:0},{gas:10,hotel:152,food:100,other:50},{gas:20,hotel:0,food:0,other:30},{gas:35,hotel:157,food:39,other:160},{gas:10,hotel:193,food:38,other:20},{gas:70,hotel:152,food:63,other:0}] };
+        function calculateTotals() {
+            let gas = 0, hotels = 0, food = 0, other = 0;
+            tripData.days.forEach(day => { gas += day.gas; hotels += day.hotel; food += day.food; other += day.other; });
+            const total = gas + hotels + food + other;
+            const perPerson = Math.round(total / tripData.travelers);
+            document.getElementById('totalCostDisplay').textContent = '$' + total.toLocaleString();
+            document.getElementById('perPersonDisplay').textContent = '$' + perPerson.toLocaleString();
+            document.getElementById('gasCost').textContent = '$' + gas.toLocaleString();
+            document.getElementById('hotelsCost').textContent = '$' + hotels.toLocaleString();
+            document.getElementById('foodCost').textContent = '$' + food.toLocaleString();
+            document.getElementById('activitiesCost').textContent = '$' + other.toLocaleString();
+            document.getElementById('totalTripCost').textContent = '$' + total.toLocaleString();
+            document.getElementById('perPersonCost').textContent = '$' + perPerson.toLocaleString();
+        }
+        document.querySelectorAll('.main-row').forEach(row => {
+            row.addEventListener('click', function(e) {
+                if (e.target.classList.contains('cost-cell') || e.target.tagName === 'INPUT') return;
+                const day = this.getAttribute('data-day');
+                const detailRow = document.querySelector('.detail-row[data-day="' + day + '"]');
+                this.classList.toggle('expanded');
+                if (detailRow) detailRow.classList.toggle('active');
+            });
+        });
+        document.querySelectorAll('.cost-cell').forEach(cell => {
+            cell.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (this.classList.contains('editing')) return;
+                const currentValue = this.getAttribute('data-value') || '0';
+                const type = this.getAttribute('data-type');
+                const dayIndex = parseInt(this.closest('tr').getAttribute('data-day')) - 1;
+                this.classList.add('editing');
+                this.innerHTML = '<input type="number" value="' + currentValue + '">';
+                const input = this.querySelector('input');
+                input.focus();
+                input.select();
+                const saveValue = () => {
+                    const newValue = parseInt(input.value) || 0;
+                    tripData.days[dayIndex][type] = newValue;
+                    this.setAttribute('data-value', newValue);
+                    this.textContent = newValue > 0 ? '$' + newValue : '-';
+                    this.classList.remove('editing');
+                    calculateTotals();
+                };
+                input.addEventListener('blur', saveValue);
+                input.addEventListener('keypress', function(e) { if (e.key === 'Enter') input.blur(); });
+            });
+        });
+        document.getElementById('tripForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('🚀 AI is generating your itinerary...');
+        });
+    </script>
+</body>
+</html>
